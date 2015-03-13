@@ -10,6 +10,7 @@ import struct
 import numpy
 
 
+
 class MatrixnetClassifier(object):
     def __init__(self, formula_stream):
         self.features = []  # list of strings
