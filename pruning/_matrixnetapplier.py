@@ -150,19 +150,16 @@ class MatrixnetClassifier(object):
 
         # extending the data so the number of events is divisible by 8
         n_events = len(events)
-        n_extended64 = (n_events + 7) // 8
-        n_extended = n_extended64 * 8
 
         # using Fortran order (surprisingly doesn't seem to influence speed much)
-        features = numpy.zeros([n_extended, events.shape[1]], dtype='float32', order='F')
-        features[:n_events, :] = events
+        features = numpy.array(events, dtype='float32', order='F')
 
         for tree_depth, nf_count, tree_iterator in self.iterate_trees():
             for tree_features, tree_cuts, leaf_values in tree_iterator:
-                leaf_indices = numpy.zeros(n_extended64, dtype='int64')
+                leaf_indices = numpy.zeros(n_events, dtype='uint64')
                 for tree_level, (feature, cut) in enumerate(zip(tree_features, tree_cuts)):
-                    leaf_indices |= (features[:, feature] > cut).view('int64') << tree_level
-                yield leaf_values[leaf_indices.view('int8')[:n_events]]
+                    leaf_indices |= ((features[:, feature] > cut) << tree_level).astype('uint64')
+                yield leaf_values[leaf_indices]
 
     def apply(self, events):
         """
@@ -178,20 +175,16 @@ class MatrixnetClassifier(object):
         """for each tree yields leaf_indices of events """
         # extending the data so the number of events is divisible by 8
         n_events = len(events)
-        n_extended64 = (n_events + 7) // 8
-        n_extended = n_extended64 * 8
 
         # using Fortran order (surprisingly doesn't seem to influence speed much)
-        features = numpy.zeros([n_extended, events.shape[1]], dtype='float32', order='F')
-        features[:n_events, :] = events
+        features = numpy.array(events, dtype='float32', order='F')
 
         for tree_depth, n_trees, tree_iterator in self.iterate_trees():
             for tree_features, tree_cuts, leaf_values in tree_iterator:
-                leaf_indices = numpy.zeros(n_extended, dtype='int8')
-                leaf_indices_view = leaf_indices.view('int64')
+                leaf_indices = numpy.zeros(n_events, dtype='uint64')
                 for tree_level, (feature, cut) in enumerate(zip(tree_features, tree_cuts)):
-                    leaf_indices_view |= (features[:, feature] > cut).view('int64') << tree_level
-                yield leaf_indices[:n_events]
+                    leaf_indices |= ((features[:, feature] > cut) << tree_level).astype('uint64')
+                yield leaf_indices
 
     def compute_leaf_indices(self, events):
         """
