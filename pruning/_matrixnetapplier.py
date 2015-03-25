@@ -1,3 +1,4 @@
+# coding=utf-8
 from __future__ import print_function, division, absolute_import
 
 """
@@ -10,9 +11,9 @@ import struct
 import numpy
 
 
-
 class MatrixnetClassifier(object):
     def __init__(self, formula_stream):
+        """Reading the data from .mx stream """
         self.features = []  # list of strings
         self.bins = []
 
@@ -146,20 +147,32 @@ class MatrixnetClassifier(object):
         :return: each time yields numpy.array predictions of shape [n_samples]
             which is output of a particular tree
         """
-        # result of first iteration
+
+        # вначале возвращаем всем одинаковое константное предсказание (bias)
         yield numpy.zeros(len(events), dtype=float) + self.bias
 
-        # extending the data so the number of events is divisible by 8
+        # число событий в предсказываемой выборке
         n_events = len(events)
 
-        # using Fortran order (surprisingly doesn't seem to influence speed much)
+        # features - матрица признаков [событие, признак]
         features = numpy.array(events, dtype='float32', order='F')
 
+        # деревья разбиты на группы по глубине. В той формуле, что лежит в репозитории, есть только одна группа
         for tree_depth, nf_count, tree_iterator in self.iterate_trees():
+
+            # каждое дерево описывается: номерами признаков (6 штук),
+            # порогами по каждому из них (6 штук), значениями в листьях (2**6 = 64 штуки)
+            # в общем случае глубина (tree_depth) будет не 6
             for tree_features, tree_cuts, leaf_values in tree_iterator:
+
+                # используем numpy-векторизацию
+                # в бинарной записи вычисляем номер листа для каждого события
                 leaf_indices = numpy.zeros(n_events, dtype='uint64')
                 for tree_level, (feature, cut) in enumerate(zip(tree_features, tree_cuts)):
                     leaf_indices |= ((features[:, feature] > cut) << tree_level).astype('uint64')
+
+                # возвращаем для каждого события значение из соответствующего ему листа
+                # это происходит дл каждого дерева
                 yield leaf_values[leaf_indices]
 
     def apply(self, events):
@@ -169,6 +182,7 @@ class MatrixnetClassifier(object):
         """
         result = numpy.zeros(len(events), dtype=float)
         for stage_predictions in self.apply_separately(events):
+            # просто суммируем для каждого события предсказания всех деревьев. Происходит это дело векторно
             result += stage_predictions
         return result
 
