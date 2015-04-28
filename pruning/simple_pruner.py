@@ -38,19 +38,20 @@ def predict_trees(X, trees):
     return result
 
 
-def select_trees(X, y, sample_weight, initial_classifier,
+def select_trees(X, y, sample_weight, initial_mx_formula,
                  loss_function=BinomialDevianceLossFunction(),
                  iterations=100,
-                 n_candidates=100, learning_rate=0.1, regularization=3.):
+                 n_candidates=100, learning_rate=0.1, regularization=10.):
     w = sample_weight  # for shortness
-    features = initial_classifier.features
     # loss_function = copy.deepcopy(loss_function)
 
     old_trees = []
-    mn_applier = _matrixnetapplier.MatrixnetClassifier(BytesIO(initial_classifier.formula_mx))
+    mn_applier = _matrixnetapplier.MatrixnetClassifier(BytesIO(initial_mx_formula))
     for depth, n_trees, iterator_trees in mn_applier.iterate_trees():
         for tree in iterator_trees:
             old_trees.append(tree)
+
+    features = list(mn_applier.features)
 
     # normalization of weight and regularization
     w[y == 0] /= numpy.sum(w[y == 0])
@@ -117,6 +118,9 @@ def select_trees(X, y, sample_weight, initial_classifier,
 
 
 def convert_trees_to_mx(trees, initial_mx):
+    """
+    reassembling list of tuples back to mx format
+    """
     self = OrderedDict()
     # collecting possible thresholds
     n_features = max([max(features) for features, _, _ in trees]) + 1
