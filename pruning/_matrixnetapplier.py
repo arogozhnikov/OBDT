@@ -188,7 +188,6 @@ class MatrixnetClassifier(object):
 
     def compute_leaf_indices_separately(self, events):
         """for each tree yields leaf_indices of events """
-        # extending the data so the number of events is divisible by 8
         n_events = len(events)
 
         # using Fortran order (surprisingly doesn't seem to influence speed much)
