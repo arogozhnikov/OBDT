@@ -38,13 +38,16 @@ def predict_trees(X, trees):
     return result
 
 
+def take_divisible(X, y, sample_weight):
+    train_length = (len(X) // 8) * 8
+    return X[:train_length], y[:train_length], sample_weight[:train_length]
+
+
 def select_trees(X, y, sample_weight, initial_mx_formula,
                  loss_function=BinomialDevianceLossFunction(),
-                 iterations=100,
-                 n_candidates=100, learning_rate=0.1, regularization=10.):
-    w = sample_weight  # for shortness
-    # loss_function = copy.deepcopy(loss_function)
+                 iterations=100, n_candidates=100, learning_rate=0.1, regularization=10.):
 
+    # collecting information from formula
     old_trees = []
     mn_applier = _matrixnetapplier.MatrixnetClassifier(BytesIO(initial_mx_formula))
     for depth, n_trees, iterator_trees in mn_applier.iterate_trees():
@@ -53,12 +56,17 @@ def select_trees(X, y, sample_weight, initial_mx_formula,
 
     features = list(mn_applier.features)
 
+    # taking divisible by 8
+    w = sample_weight  # for shortness
+    X, y, w = take_divisible(X, y, sample_weight=w)
+
     # normalization of weight and regularization
     w[y == 0] /= numpy.sum(w[y == 0])
     w[y == 1] /= numpy.sum(w[y == 1])
     w /= numpy.mean(w)
 
     # fitting loss function
+    loss_function = copy.deepcopy(loss_function)
     loss_function.fit(X, y, w)
 
     new_trees = []
@@ -88,7 +96,7 @@ def select_trees(X, y, sample_weight, initial_mx_formula,
         print(iteration, loss_function(pred), roc_auc_score(y, pred, sample_weight=w))
 
     # return ShortenedClassifier(features, new_trees)
-    new_formula_mx = convert_trees_to_mx(new_trees, initial_classifier.formula_mx)
+    new_formula_mx = convert_trees_to_mx(new_trees, initial_mx_formula)
     # function returns features used in formula and new formula_mx
     return features, new_formula_mx, _matrixnetapplier.MatrixnetClassifier(BytesIO(new_formula_mx))
 
