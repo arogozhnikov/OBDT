@@ -44,7 +44,8 @@ def take_divisible(X, y, sample_weight):
 
 def select_trees(X, y, sample_weight, initial_mx_formula,
                  loss_function=BinomialDevianceLossFunction(),
-                 iterations=100, n_candidates=100, learning_rate=0.1, regularization=10.):
+                 iterations=100, n_candidates=100, learning_rate=0.1, regularization=10.,
+                 verbose=False):
     # collecting information from formula
     old_trees = []
     mn_applier = _matrixnetapplier.MatrixnetClassifier(BytesIO(initial_mx_formula))
@@ -91,7 +92,8 @@ def select_trees(X, y, sample_weight, initial_mx_formula,
         tree = candidate_new_trees[numpy.argmin(candidate_losses)]
         new_trees.append(tree)
         pred += predict_tree(X, tree)
-        print(iteration, loss_function(pred), roc_auc_score(y, pred, sample_weight=w))
+        if verbose:
+            print(iteration, loss_function(pred), roc_auc_score(y, pred, sample_weight=w))
 
     return utils.OBDTListClassifier(features, trees=new_trees)
 
