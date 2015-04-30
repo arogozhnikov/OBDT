@@ -93,8 +93,5 @@ def select_trees(X, y, sample_weight, initial_mx_formula,
         pred += predict_tree(X, tree)
         print(iteration, loss_function(pred), roc_auc_score(y, pred, sample_weight=w))
 
-    # return ShortenedClassifier(features, new_trees)
-    new_formula_mx = utils.convert_list_to_mx(new_trees, initial_mx_formula)
-    # function returns features used in formula and new formula_mx
-    return features, new_formula_mx
+    return utils.OBDTListClassifier(features, trees=new_trees)
 
