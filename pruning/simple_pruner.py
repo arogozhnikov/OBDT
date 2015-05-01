@@ -42,10 +42,45 @@ def take_divisible(X, y, sample_weight):
     return X[:train_length], y[:train_length], sample_weight[:train_length]
 
 
+def compute_pessimistic_predictions(y_signed, predictions, tree_predictions, learning_rate, selected_probability):
+    """
+    Usually, one uses formula in GB:
+    predictions += learning_rate * tree_predictions,
+    but in pessimistic probabilistic setting (my term), the formula is
+    predictions += - y_i * log( (1 - sp) + sp * exp( - y_i * learning_rate * tree_predictions) )
+    where sp = selected_probability, probability with which the final classifier is included in GB,
+          y_i are +1 or -1.
+
+    :param y_signed: signed labels
+    :param tree_predictions: predictions of new tree (without any normalization)
+    :param learning_rate: float, shrinkage
+    :param selected_probability: probability that particular tree is activated
+    """
+    sp = selected_probability
+    return predictions - y_signed * numpy.log((1. - sp) + sp * numpy.exp(-y_signed * learning_rate * tree_predictions))
+
+
 def select_trees(X, y, sample_weight, initial_mx_formula,
                  loss_function=BinomialDevianceLossFunction(),
-                 iterations=100, n_candidates=100, learning_rate=0.1, regularization=10.,
+                 iterations=100, n_candidates=100,
+                 learning_rate=0.1, selected_probability=1.,
+                 regularization=10.,
                  verbose=False):
+    """
+    Represents basic pruning algorithm, which greedily adds
+    :param X:
+    :param y:
+    :param sample_weight:
+    :param initial_mx_formula:
+    :param loss_function: loss function (following hep_ml convention for losses)
+    :param iterations: int, how many estimators we shall leave
+    :param n_candidates: how many candidates we check on each iteration
+    :param learning_rate: shrinkage, float
+    :param selected_probability: almost the same as shrinkage, but makes different steps for guessed and wrong steps.
+    :param regularization: roughly, it is amount of event of each class added to each leaf. Represents a penalty
+    :param verbose: bool, print stats at each step?
+    :return: new OBDT list classifier.
+    """
     # collecting information from formula
     old_trees = []
     mn_applier = _matrixnetapplier.MatrixnetClassifier(BytesIO(initial_mx_formula))
@@ -56,8 +91,8 @@ def select_trees(X, y, sample_weight, initial_mx_formula,
     features = list(mn_applier.features)
 
     # taking divisible by 8
-    w = sample_weight  # for shortness
-    X, y, w = take_divisible(X, y, sample_weight=w)
+    X, y, w = take_divisible(X, y, sample_weight=sample_weight)
+    y_signed = 2 * y - 1
 
     # normalization of weight and regularization
     w[y == 0] /= numpy.sum(w[y == 0])
@@ -81,17 +116,19 @@ def select_trees(X, y, sample_weight, initial_mx_formula,
         candidate_new_trees = []
         for tree in candidates:
             leaves = compute_leaves(X, tree)
-            new_leaf_values = numpy.bincount(leaves, weights=grads, minlength=2 ** 6) * learning_rate
+            new_leaf_values = numpy.bincount(leaves, weights=grads, minlength=2 ** 6)
             new_leaf_values /= numpy.bincount(leaves, weights=hesss, minlength=2 ** 6) + regularization
             new_tree = tree[0], tree[1], new_leaf_values
-            new_preds = pred + predict_tree(X, new_tree)
+            # for the sake of speed, here we use approximate step
+            new_preds = pred + predict_tree(X, new_tree) * learning_rate * selected_probability
             candidate_losses.append(loss_function(new_preds))
             candidate_new_trees.append(new_tree)
 
         # selecting one with minimal loss
         tree = candidate_new_trees[numpy.argmin(candidate_losses)]
         new_trees.append(tree)
-        pred += predict_tree(X, tree)
+        pred = compute_pessimistic_predictions(y_signed, predictions=predict_tree(X, tree), learning_rate=learning_rate,
+                                               selected_probability=selected_probability)
         if verbose:
             print(iteration, loss_function(pred), roc_auc_score(y, pred, sample_weight=w))
 
