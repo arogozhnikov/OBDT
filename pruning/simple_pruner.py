@@ -120,7 +120,8 @@ def select_trees(X, y, sample_weight, initial_mx_formula,
             new_leaf_values /= numpy.bincount(leaves, weights=hesss, minlength=2 ** 6) + regularization
             new_tree = tree[0], tree[1], new_leaf_values
             # for the sake of speed, here we use approximate step
-            new_preds = pred + predict_tree(X, new_tree) * learning_rate * selected_probability
+            effective_leaf_values = new_leaf_values * (learning_rate * selected_probability)
+            new_preds = pred + effective_leaf_values[leaves]
             candidate_losses.append(loss_function(new_preds))
             candidate_new_trees.append(new_tree)
 
