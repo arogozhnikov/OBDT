@@ -127,8 +127,8 @@ def select_trees(X, y, sample_weight, initial_mx_formula,
         # selecting one with minimal loss
         tree = candidate_new_trees[numpy.argmin(candidate_losses)]
         new_trees.append(tree)
-        pred = compute_pessimistic_predictions(y_signed, predictions=predict_tree(X, tree), learning_rate=learning_rate,
-                                               selected_probability=selected_probability)
+        pred = compute_pessimistic_predictions(y_signed, predictions=pred, tree_predictions=predict_tree(X, tree),
+                                               learning_rate=learning_rate, selected_probability=selected_probability)
         if verbose:
             print(iteration, loss_function(pred), roc_auc_score(y, pred, sample_weight=w))
 

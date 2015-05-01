@@ -9,7 +9,7 @@ __author__ = 'Alex Rogozhnikov'
 
 
 def test_converters(mx_filename='../pruning/formula.mx',
-                    higgs_filename='../../../datasets/higgs/training.csv'):
+                    higgs_filename='../data/training.csv'):
     with open(mx_filename, 'rb') as mx:
         formula_mx = mx.read()
 
