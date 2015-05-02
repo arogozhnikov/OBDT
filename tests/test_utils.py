@@ -8,7 +8,7 @@ from six import BytesIO
 __author__ = 'Alex Rogozhnikov'
 
 
-def test_converters(mx_filename='../pruning/formula.mx',
+def test_converters(mx_filename='../data/formula.mx',
                     higgs_filename='../data/training.csv'):
     with open(mx_filename, 'rb') as mx:
         formula_mx = mx.read()

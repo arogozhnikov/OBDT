@@ -6,7 +6,7 @@ import numpy
 from pruning import simple_pruner, utils
 
 
-def test_pruner(mx_filename='../pruning/formula.mx',
+def test_pruner(mx_filename='../data/formula.mx',
                 higgs_filename='../data/training.csv'):
     with open(mx_filename, 'rb') as mx:
         formula_mx = mx.read()
