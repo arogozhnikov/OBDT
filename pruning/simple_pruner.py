@@ -18,6 +18,9 @@ except:
 
 
 def compute_leaves(X, tree):
+    """
+    :return: numpy.array of shape
+    """
     assert len(X) % 8 == 0, 'for fast computations need len(X) be divisible by 8'
     leaf_indices = numpy.zeros(len(X) // 8, dtype='int64')
     for tree_level, (feature, cut) in enumerate(zip(tree[0], tree[1])):
@@ -62,25 +65,29 @@ def compute_pessimistic_predictions(y_signed, predictions, tree_predictions, lea
 
 def select_trees(X, y, sample_weight, initial_mx_formula,
                  loss_function=BinomialDevianceLossFunction(),
-                 iterations=100, n_candidates=100,
+                 iterations=100,
+                 n_candidates=100, n_keptbest=0,
                  learning_rate=0.1, selected_probability=1.,
                  regularization=10.,
                  verbose=False):
     """
     Represents basic pruning algorithm, which greedily adds
-    :param X:
-    :param y:
-    :param sample_weight:
+    :param X: data
+    :param y: binary labels (0 and 1)
+    :param sample_weight: weights
     :param initial_mx_formula:
     :param loss_function: loss function (following hep_ml convention for losses)
     :param iterations: int, how many estimators we shall leave
     :param n_candidates: how many candidates we check on each iteration
+    :param n_keptbest: how many classifiers saved from previous iteration
     :param learning_rate: shrinkage, float
     :param selected_probability: almost the same as shrinkage, but makes different steps for guessed and wrong steps.
     :param regularization: roughly, it is amount of event of each class added to each leaf. Represents a penalty
     :param verbose: bool, print stats at each step?
     :return: new OBDT list classifier.
     """
+    assert n_candidates > n_keptbest, "can't keep more then tested on each stage"
+
     # collecting information from formula
     old_trees = []
     mn_applier = _matrixnetapplier.MatrixnetClassifier(BytesIO(initial_mx_formula))
@@ -94,7 +101,7 @@ def select_trees(X, y, sample_weight, initial_mx_formula,
     X, y, w = take_divisible(X, y, sample_weight=sample_weight)
     y_signed = 2 * y - 1
 
-    # normalization of weight and regularization
+    # normalization of weight
     w[y == 0] /= numpy.sum(w[y == 0])
     w[y == 1] /= numpy.sum(w[y == 1])
     w /= numpy.mean(w)
@@ -105,9 +112,12 @@ def select_trees(X, y, sample_weight, initial_mx_formula,
 
     new_trees = []
     pred = numpy.zeros(len(X), dtype=float)
+    prev_iteration_best_ids = []  # ids of best trees at previous stages
     for iteration in range(iterations):
-        selected = numpy.random.choice(len(old_trees), replace=False, size=n_candidates)
+        selected = numpy.random.choice(len(old_trees), replace=False, size=n_candidates - len(prev_iteration_best_ids))
+        selected = numpy.concatenate([selected, prev_iteration_best_ids]).astype(int)
         candidates = [old_trees[i] for i in selected]
+        assert len(candidates) == n_candidates
 
         grads = loss_function.negative_gradient(pred)
         hesss = loss_function.hessian(pred)
@@ -128,6 +138,8 @@ def select_trees(X, y, sample_weight, initial_mx_formula,
         # selecting one with minimal loss
         tree = candidate_new_trees[numpy.argmin(candidate_losses)]
         new_trees.append(tree)
+        prev_iteration_best_ids = numpy.take(selected, numpy.argsort(candidate_losses)[1:n_keptbest])
+
         pred = compute_pessimistic_predictions(y_signed, predictions=pred, tree_predictions=predict_tree(X, tree),
                                                learning_rate=learning_rate, selected_probability=selected_probability)
         if verbose:

@@ -16,5 +16,8 @@ def test_pruner(mx_filename='../data/formula.mx',
 
     # checking workability, not quality
     simple_pruner.select_trees(X, y, w, initial_mx_formula=formula_mx,
-                               iterations=4, learning_rate=0.5, selected_probability=0.5)
+                               iterations=4, learning_rate=0.5, selected_probability=0.5, verbose=True)
 
+    simple_pruner.select_trees(X, y, w, initial_mx_formula=formula_mx,
+                               n_keptbest=10,
+                               iterations=4, learning_rate=0.5, selected_probability=0.5, verbose=True)
