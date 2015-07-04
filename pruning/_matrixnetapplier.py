@@ -85,7 +85,7 @@ class MatrixnetClassifier(object):
             numpy.array of shape [n_binary_features] with cuts used (float32)
         """
         n_binary_features = sum(len(x) for x in self.bins)
-        features_ids = numpy.zeros(n_binary_features, dtype='int8')
+        features_ids = numpy.zeros(n_binary_features, dtype='int32')
         cuts = numpy.zeros(n_binary_features, dtype='float32')
         binary_feature_index = 0
         for feature_index in range(len(self.bins)):
