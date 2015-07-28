@@ -7,7 +7,6 @@ import numpy
 import copy
 from sklearn.metrics import roc_auc_score
 from six import BytesIO
-from hep_ml.losses import BinomialDevianceLossFunction
 from . import utils
 
 try:
@@ -64,7 +63,7 @@ def compute_pessimistic_predictions(y_signed, predictions, tree_predictions, lea
 
 
 def select_trees(X, y, sample_weight, initial_mx_formula,
-                 loss_function=BinomialDevianceLossFunction(),
+                 loss_function,
                  iterations=100,
                  n_candidates=100, n_keptbest=0,
                  learning_rate=0.1, selected_probability=1.,
