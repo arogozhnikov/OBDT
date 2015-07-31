@@ -76,7 +76,7 @@ class OBDTListClassifier(Classifier):
         pass
 
     def staged_decision_function(self, X):
-        X = self._get_train_features(X).values
+        X = X[self.features]
         result = numpy.zeros(len(X))
         for features, cuts, leaf_values in self.trees:
             indices = numpy.zeros(len(X), dtype=int)
