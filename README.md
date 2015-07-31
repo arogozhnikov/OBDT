@@ -1,5 +1,4 @@
 # OBDT
 
-In this repository different ways of pruning boosted ODT are kept for binary classification.
+In this repository different ways of pruning boosted ODT are kept.
 
-Basic dataset for comparison - kaggle-higgs. <br />
