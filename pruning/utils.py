@@ -64,7 +64,7 @@ def print_control_metrics(trainY, proba_train, trainW, testY, proba_test, testW)
 class OBDTListClassifier(Classifier):
     def __init__(self, features, trees):
         """
-        Boosted ODT, which follows REP conventions though cannot be fiited.
+        Boosted ODT, which follows REP conventions though cannot be fitted.
         :param features: list of strings, features used.
         :param trees: list of tuples, each tuple represents a tree.
         Tuple is features (features, cuts, leaf_values)
@@ -76,7 +76,8 @@ class OBDTListClassifier(Classifier):
         pass
 
     def staged_decision_function(self, X):
-        X = X[self.features]
+        assert numpy.shape(X)[1] == len(self.features)
+        X = numpy.array(X)
         result = numpy.zeros(len(X))
         for features, cuts, leaf_values in self.trees:
             indices = numpy.zeros(len(X), dtype=int)
