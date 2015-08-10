@@ -5,41 +5,13 @@ __author__ = 'Alex Rogozhnikov'
 import numpy
 import copy
 from six import BytesIO
-from . import utils
+from .utils import take_divisible, compute_leaves, predict_tree, OBDTListClassifier
 
 try:
     # To work we need both
     from pruning import _matrixnetapplier
 except:
     from rep.estimators import _matrixnetapplier
-
-
-def compute_leaves(X, tree):
-    """
-    :return: numpy.array of shape
-    """
-    assert len(X) % 8 == 0, 'for fast computations need len(X) be divisible by 8'
-    leaf_indices = numpy.zeros(len(X) // 8, dtype='int64')
-    for tree_level, (feature, cut) in enumerate(zip(tree[0], tree[1])):
-        leaf_indices |= (X[:, feature] > cut).view('int64') << tree_level
-    return leaf_indices.view('int8')
-
-
-def predict_tree(X, tree):
-    leaf_values = tree[2]
-    return leaf_values[compute_leaves(X, tree)]
-
-
-def predict_trees(X, trees):
-    result = numpy.zeros(len(X), dtype=float)
-    for tree in trees:
-        result += predict_tree(X, tree)
-    return result
-
-
-def take_divisible(X, y, sample_weight):
-    train_length = (len(X) // 8) * 8
-    return X[:train_length], y[:train_length], sample_weight[:train_length]
 
 
 def compute_pessimistic_predictions(y_signed, predictions, tree_predictions, learning_rate, selected_probability):
@@ -84,6 +56,7 @@ def canonical_pruning(X, y, sample_weight, initial_mx_formula,
     :return: new OBDT list classifier.
     """
     assert n_candidates > n_kept_best, "can't keep more then tested on each stage"
+    X = numpy.array(X, dtype='float32', order='F')
 
     # collecting information from formula
     old_trees = []
@@ -137,4 +110,4 @@ def canonical_pruning(X, y, sample_weight, initial_mx_formula,
         if verbose:
             print(iteration, loss_function(pred))
 
-    return utils.OBDTListClassifier(features, trees=new_trees)
+    return OBDTListClassifier(features, trees=new_trees)

@@ -11,6 +11,34 @@ from six import BytesIO
 __author__ = 'Alex Rogozhnikov'
 
 
+def compute_leaves(X, tree):
+    """
+    :return: numpy.array of shape
+    """
+    assert len(X) % 8 == 0, 'for fast computations need len(X) be divisible by 8'
+    leaf_indices = numpy.zeros(len(X) // 8, dtype='int64')
+    for tree_level, (feature, cut) in enumerate(zip(tree[0], tree[1])):
+        leaf_indices |= (X[:, feature] > cut).view('int64') << tree_level
+    return leaf_indices.view('int8')
+
+
+def predict_tree(X, tree):
+    leaf_values = tree[2]
+    return leaf_values[compute_leaves(X, tree)]
+
+
+def predict_trees(X, trees):
+    result = numpy.zeros(len(X), dtype=float)
+    for tree in trees:
+        result += predict_tree(X, tree)
+    return result
+
+
+def take_divisible(X, y, sample_weight):
+    train_length = (len(X) // 8) * 8
+    return X[:train_length], y[:train_length], sample_weight[:train_length]
+
+
 def compute_ams_on_cuts(answers, predictions, sample_weight):
     """ Predictions are probabilities"""
     b, s, thresholds = roc_curve(answers, predictions, sample_weight=sample_weight)
